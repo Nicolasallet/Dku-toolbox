@@ -27,7 +27,7 @@ class RadarMesure:
         self.numero = int(match.group("num"))
         self.polarisation = match.group("pol")
         self.angle_local = int(match.group("angle"))
-
+        ## Ajouter un self.temp lu dans le fichier si disponible
         # === Calcul du spectre à l'initialisation ===
         self.df, _ = self.raw_to_mean_spectrum()
 
@@ -99,10 +99,10 @@ class RadarMesure:
 
     def get_air(self, angle_incident, range_):
         theta_deg = 25
-        phi_deg = 16
+        phi_deg = 16                                                ## A ajuster selon self.frequence
         theta_rad = np.radians(theta_deg)
         phi_rad = np.radians(phi_deg)
-        return (np.pi * range_**2 * theta_rad * phi_rad) / (8 * np.log(2) * np.cos(angle_incident))
+        return (np.pi * range_**2 * theta_rad * phi_rad) / (8 * np.log(2) * np.cos(angle_incident))           ## A changer selon gedelster ?
 
     def get_sigma0(self):
         angle_rad = np.radians(self.angle_local)
