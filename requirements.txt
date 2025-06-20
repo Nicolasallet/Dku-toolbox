@@ -1,0 +1,8 @@
+collections
+glob
+itertools
+matplotlib
+numpy
+operator
+pandas
+scipy
