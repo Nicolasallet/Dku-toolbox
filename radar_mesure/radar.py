@@ -27,7 +27,16 @@ class RadarMesure:
         self.numero = int(match.group("num"))
         self.polarisation = match.group("pol")
         self.angle_local = int(match.group("angle"))
-        ## Ajouter un self.temp lu dans le fichier si disponible
+        self.time = self.extract_timestamp()
+        self.temp = self.extract_sensor_temperature()
+
+        if self.frequence == 13 : 
+            self.offset = 0.332
+            self.calib = 2.317e-4
+        if self.frequence == 17 : 
+            self.offset = 0.226
+            self.calib = 1.723e-3
+
         # === Calcul du spectre à l'initialisation ===
         self.df, _ = self.raw_to_mean_spectrum()
 
@@ -93,16 +102,43 @@ class RadarMesure:
             'crosspol': output_mean[:, 0],
             'copol_std': output_std[:, 1],
             'crosspol_std': output_std[:, 0]
-        }, index=dist)
+        }, index=dist+self.offset)
 
         return output, os.path.basename(self.filepath).split('.')[0]
 
+    def extract_timestamp(self):
+    """Extrait le timestamp en datetime depuis un fichier."""
+    with open(filepath, 'r', encoding='utf-8') as f:
+        for line in f:
+            if "# Timestamp:" in line:
+                match = re.search(r"(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+)", line)
+                if match:
+                    return pd.to_datetime(match.group())
+    return None
+
+    def extract_sensor_temperature(self):
+    """Extrait les températures des capteurs depuis un fichier."""
+    with open(filepath, 'r', encoding='utf-8') as f:
+        for line in f:
+            if "# Sensor temperature:" in line:
+                match = re.search(r"\{.*\}", line)
+                if match:
+                    return eval(match.group())  
+    return None
+
     def get_air(self, angle_incident, range_):
-        theta_deg = 25
-        phi_deg = 16                                                ## A ajuster selon self.frequence
+        if self.frequence == 17 :
+            theta_deg = 25
+            phi_deg = 16
+        if self.frequence == 13 : 
+            theta_deg = 24.5
+            phi_deg = 19.5
+            
         theta_rad = np.radians(theta_deg)
         phi_rad = np.radians(phi_deg)
         return (np.pi * range_**2 * theta_rad * phi_rad) / (8 * np.log(2) * np.cos(angle_incident))           ## A changer selon gedelster ?
+
+
 
     def get_sigma0(self):
         angle_rad = np.radians(self.angle_local)
