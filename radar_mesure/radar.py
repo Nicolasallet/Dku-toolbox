@@ -8,7 +8,7 @@ from scipy import signal
 from scipy.fft import fft, fftfreq
 
 class RadarMesure:
-    def __init__(self, filepath, beta, pad_factor=1):
+    def __init__(self, filepath, beta=5, pad_factor=2):
         self.filepath = filepath
         self.beta = beta
         self.pad_factor = pad_factor
@@ -107,24 +107,24 @@ class RadarMesure:
         return output, os.path.basename(self.filepath).split('.')[0]
 
     def extract_timestamp(self):
-    """Extrait le timestamp en datetime depuis un fichier."""
-    with open(filepath, 'r', encoding='utf-8') as f:
-        for line in f:
-            if "# Timestamp:" in line:
-                match = re.search(r"(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+)", line)
-                if match:
-                    return pd.to_datetime(match.group())
-    return None
+        """Extrait le timestamp en datetime depuis un fichier."""
+        with open(filepath, 'r', encoding='utf-8') as f:
+            for line in f:
+                if "# Timestamp:" in line:
+                    match = re.search(r"(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+)", line)
+                    if match:
+                        return pd.to_datetime(match.group())
+        return None
 
     def extract_sensor_temperature(self):
-    """Extrait les températures des capteurs depuis un fichier."""
-    with open(filepath, 'r', encoding='utf-8') as f:
-        for line in f:
-            if "# Sensor temperature:" in line:
-                match = re.search(r"\{.*\}", line)
-                if match:
-                    return eval(match.group())  
-    return None
+        """Extrait les températures des capteurs depuis un fichier."""
+        with open(filepath, 'r', encoding='utf-8') as f:
+            for line in f:
+                if "# Sensor temperature:" in line:
+                    match = re.search(r"\{.*\}", line)
+                    if match:
+                        return eval(match.group())  
+        return None
 
     def get_air(self, angle_incident, range_):
         if self.frequence == 17 :
@@ -133,7 +133,7 @@ class RadarMesure:
         if self.frequence == 13 : 
             theta_deg = 24.5
             phi_deg = 19.5
-            
+
         theta_rad = np.radians(theta_deg)
         phi_rad = np.radians(phi_deg)
         return (np.pi * range_**2 * theta_rad * phi_rad) / (8 * np.log(2) * np.cos(angle_incident))           ## A changer selon gedelster ?
