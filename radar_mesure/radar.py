@@ -14,19 +14,39 @@ class RadarMesure:
         self.pad_factor = pad_factor
 
         # === Parsing du nom de fichier ===
+
+
         filename = os.path.basename(filepath)
         pattern = r'(?P<freq>\d+)GHz_(?P<site>\w+)_(?P<type>\w+)_(?P<num>\d+)_'
         pattern += r'(?P<pol>[hv])_(?P<angle>\d+)deg'
 
-        match = re.match(pattern, filename)
-        if not match:
-            raise ValueError("Nom de fichier invalide : attendu format 13GHz_halfpipe_ridge_0_v_30deg.txt")
+        try:
+            match = re.match(pattern, filename)
+            if not match:
+                raise ValueError
 
-        self.frequence = int(match.group("freq"))
-        self.site = match.group("site")
-        self.numero = int(match.group("num"))
-        self.polarisation = match.group("pol")
-        self.angle_local = int(match.group("angle"))
+            self.frequence = int(match.group("freq"))
+            self.site = match.group("site")
+            self.numero = int(match.group("num"))
+            self.polarisation = match.group("pol")
+            self.angle_local = int(match.group("angle"))
+        except ValueError:
+            # print(f"[WARNING] Nom de fichier non conforme au format attendu : '{filename}'")
+
+            # Tentative d'extraction partielle : fréquence et site
+            freq_match = re.search(r'(?P<freq>\d+)GHz', filename)
+            site_match = re.search(r'\d+GHz_(?P<site>\w+)', filename)
+            num_match = re.search(r'_(?P<num>\d+)_',filename)
+
+            self.num = int(num_match.group("num")) if num_match else None
+            self.frequence = int(freq_match.group("freq")) if freq_match else None
+            self.site = site_match.group("site") if site_match else None
+
+            # Autres champs mis à None
+            self.numero = None
+            self.polarisation = None
+            self.angle_local = None
+
         self.time = self.extract_timestamp()
         self.temp = self.extract_sensor_temperature()
 
@@ -81,9 +101,13 @@ class RadarMesure:
                 trace = ar[:, ch] * kaiwindow
                 trace_padded = np.pad(trace, (0, N_padded - N), 'constant')
                 fft_result = fft(trace_padded)
-                ps = np.abs(fft_result[:N_padded // 2]) ** 2 / (s1 ** 2)
-                ps_rms[:, ch, i] = ps
+                # === Conversion en W/Hz ===
+                V2 = np.abs(fft_result[:N_padded // 2]) ** 2 / (s1 ** 2)  # [V²]
+                P = V2 / 50  # [W] avec 50 Ohms d'impédance
+                BW = frequence_echantillonage / N_padded  # bande de résolution (Hz/bin)
+                ps_watt_per_hz = P / BW  # [W/Hz]
 
+                ps_rms[:, ch, i] = ps_watt_per_hz
         output_mean = ps_rms.mean(axis=2)
         output_std = ps_rms.std(axis=2)
 
@@ -108,7 +132,7 @@ class RadarMesure:
 
     def extract_timestamp(self):
         """Extrait le timestamp en datetime depuis un fichier."""
-        with open(filepath, 'r', encoding='utf-8') as f:
+        with open(self.filepath, 'r', encoding='utf-8') as f:
             for line in f:
                 if "# Timestamp:" in line:
                     match = re.search(r"(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+)", line)
@@ -118,7 +142,7 @@ class RadarMesure:
 
     def extract_sensor_temperature(self):
         """Extrait les températures des capteurs depuis un fichier."""
-        with open(filepath, 'r', encoding='utf-8') as f:
+        with open(self.filepath, 'r', encoding='utf-8') as f:
             for line in f:
                 if "# Sensor temperature:" in line:
                     match = re.search(r"\{.*\}", line)
