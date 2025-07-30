@@ -38,12 +38,11 @@ class RadarMesure:
             site_match = re.search(r'\d+GHz_(?P<site>\w+)', filename)
             num_match = re.search(r'_(?P<num>\d+)_',filename)
 
-            self.num = int(num_match.group("num")) if num_match else None
+            self.numero = int(num_match.group("num")) if num_match else None
             self.frequence = int(freq_match.group("freq")) if freq_match else None
             self.site = site_match.group("site") if site_match else None
 
             # Autres champs mis à None
-            self.numero = None
             self.polarisation = None
             self.angle_local = None
 
@@ -67,6 +66,7 @@ class RadarMesure:
         T = 1 / frequence_echantillonage
         n_chirp = 150
         N_padded = N * self.pad_factor
+        BW = frequence_echantillonage / N_padded  # bande de résolution (Hz/bin)
 
         df = pd.read_csv(self.filepath, header=35, sep=',')
         if len(df.columns) == 1:
@@ -90,7 +90,7 @@ class RadarMesure:
 
         kaiwindow, s1, s2 = kai(N, self.beta)
 
-        data_cplx = np.zeros((N, 2, n_chirp), dtype=np.complex_)
+        data_cplx = np.zeros((N, 2, n_chirp), dtype=np.complex128)
         data_cplx[:, 0, :] = (data_array[:, 0, :] + 1j * data_array[:, 1, :]) * scaling_factor_adc
         data_cplx[:, 1, :] = (data_array[:, 2, :] + 1j * data_array[:, 3, :]) * scaling_factor_adc
 
@@ -103,8 +103,7 @@ class RadarMesure:
                 fft_result = fft(trace_padded)
                 # === Conversion en W/Hz ===
                 V2 = np.abs(fft_result[:N_padded // 2]) ** 2 / (s1 ** 2)  # [V²]
-                P = V2 / 50  # [W] avec 50 Ohms d'impédance
-                BW = frequence_echantillonage / N_padded  # bande de résolution (Hz/bin)
+                P = V2 / 50  # [W] avec 50 Ohms d'impédance   (P = U I = U²/Z) 
                 ps_watt_per_hz = P / BW  # [W/Hz]
 
                 ps_rms[:, ch, i] = ps_watt_per_hz
