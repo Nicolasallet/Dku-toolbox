@@ -8,7 +8,8 @@ from scipy import signal
 from scipy.fft import fft, fftfreq
 
 class RadarMesure:
-    def __init__(self, filepath, beta=5, pad_factor=2):
+    def __init__(self, filepath, beta=8, pad_factor=5):
+
         self.filepath = filepath
         self.beta = beta
         self.pad_factor = pad_factor
@@ -64,7 +65,7 @@ class RadarMesure:
         frequence_echantillonage = 10e6
         N = 1024
         T = 1 / frequence_echantillonage
-        n_chirp = 150
+        n_chirp = 50
         N_padded = N * self.pad_factor
         BW = frequence_echantillonage / N_padded  # bande de résolution (Hz/bin)
 
