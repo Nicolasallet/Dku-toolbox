@@ -6,6 +6,10 @@ import re
 import os
 from scipy import signal
 from scipy.fft import fft, fftfreq
+from dku_data_parser import extract_radar_info
+
+
+
 
 class RadarMesure:
     def __init__(self, filepath, beta=8, pad_factor=5):
@@ -14,40 +18,22 @@ class RadarMesure:
         self.beta = beta
         self.pad_factor = pad_factor
 
-        # === Parsing du nom de fichier ===
+        # === Parsing  ===
 
+        metadata_file = '../data/metadata/Fortress24-25_smp_metadata_notes.ods'
 
-        filename = os.path.basename(filepath)
-        pattern = r'(?P<freq>\d+)GHz_(?P<site>\w+)_(?P<type>\w+)_(?P<num>\d+)_'
-        pattern += r'(?P<pol>[hv])_(?P<angle>\d+)deg'
+        info = extract_radar_info(filepath, metadata_file)
 
-        try:
-            match = re.match(pattern, filename)
-            if not match:
-                raise ValueError
-
-            self.frequence = int(match.group("freq"))
-            self.site = match.group("site")
-            self.numero = int(match.group("num"))
-            self.polarisation = match.group("pol")
-            self.angle_local = int(match.group("angle"))
-        except ValueError:
-            # print(f"[WARNING] Nom de fichier non conforme au format attendu : '{filename}'")
-
-            # Tentative d'extraction partielle : fréquence et site
-            freq_match = re.search(r'(?P<freq>\d+)GHz', filename)
-            site_match = re.search(r'\d+GHz_(?P<site>\w+)', filename)
-            num_match = re.search(r'_(?P<num>\d+)_',filename)
-
-            self.numero = int(num_match.group("num")) if num_match else None
-            self.frequence = int(freq_match.group("freq")) if freq_match else None
-            self.site = site_match.group("site") if site_match else None
-
-            # Autres champs mis à None
-            self.polarisation = None
-            self.angle_local = None
-
-        self.time = self.extract_timestamp()
+        self.frequence = info['frequence']
+        self.site = info['site']
+        self.numero = info['numero']
+        self.polarisation = info['polarisation']
+        self.angle_local = info['angle_local']
+        self.time = info['timestamp']
+        self.coords = (info['lat'],info['lon'])
+        self.pente = info['pente']
+        
+        
         self.temp = self.extract_sensor_temperature()
 
         if self.frequence == 13 : 
@@ -130,15 +116,6 @@ class RadarMesure:
 
         return output, os.path.basename(self.filepath).split('.')[0]
 
-    def extract_timestamp(self):
-        """Extrait le timestamp en datetime depuis un fichier."""
-        with open(self.filepath, 'r', encoding='utf-8') as f:
-            for line in f:
-                if "# Timestamp:" in line:
-                    match = re.search(r"(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+)", line)
-                    if match:
-                        return pd.to_datetime(match.group())
-        return None
 
     def extract_sensor_temperature(self):
         """Extrait les températures des capteurs depuis un fichier."""
