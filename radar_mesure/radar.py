@@ -85,7 +85,13 @@ class RadarMesure:
         for i in range(n_chirp):
             ar = data_cplx[:, :, i]
             for ch in range(2):
-                trace = ar[:, ch] * kaiwindow
+                  # === Étape de detrending linéaire (partie réelle et imaginaire) ===
+                real_detrended = signal.detrend(np.real(ar[:, ch]))
+                imag_detrended = signal.detrend(np.imag(ar[:, ch]))
+                trace = real_detrended + 1j * imag_detrended
+
+                trace = trace * kaiwindow  # application de la fenêtre de Kaiser
+
                 trace_padded = np.pad(trace, (0, N_padded - N), 'constant')
                 fft_result = fft(trace_padded)
                 # === Conversion en W/Hz ===
@@ -93,7 +99,7 @@ class RadarMesure:
                 P = V2 / 50  # [W] avec 50 Ohms d'impédance   (P = U I = U²/Z) 
                 ps_watt_per_hz = P / BW  # [W/Hz]
 
-                ps_rms[:, ch, i] = ps_watt_per_hz
+                ps_rms[:, ch, i] = V2
         output_mean = ps_rms.mean(axis=2)
         output_std = ps_rms.std(axis=2)
 

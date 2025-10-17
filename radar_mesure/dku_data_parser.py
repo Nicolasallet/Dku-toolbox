@@ -1,7 +1,7 @@
 import os
 import re
 import ast
-from datetime import datetime
+from datetime import date time
 import pandas as pd
 
 
@@ -104,7 +104,7 @@ def parse_metadata_file(metadata_filepath, site, numero, timestamp):
     resultat = df[mask]
 
     if resultat.empty:
-        print(f"[INFO] Aucune entrée trouvée pour site={site}, num={numero}, leg={leg}")
+        #print(f"[INFO] Aucune entrée trouvée pour site={site}, num={numero}, leg={leg}")
         return {}
 
     # --- Conversion de la ligne unique en dictionnaire ---
@@ -215,11 +215,11 @@ def extract_radar_info(radar_filepath, metadata_filepath=None):
         info["timestamp"] = datetime.fromisoformat(header["timestamp"].strip())
 
     # --- Numéro de mesure ---
-    if "numero" in header:
-        try:
-            info["numero"] = int(header["numero"])
-        except ValueError:
-            info["numero"] = header["numero"]
+    #if "numero" in header:
+        #try:
+            #info["numero"] = int(header["numero"])
+        #except ValueError:
+            #info["numero"] = header["numero"]
 
 
     # --- Lecture du nom de fichier (site + angle) ---
@@ -234,14 +234,19 @@ def extract_radar_info(radar_filepath, metadata_filepath=None):
     if "angle_local" in header:
         info["angle_local"] = header["angle_local"]
         
-    
+    if "numero" in header:
+        info["numero"] = header["numero"]
 
     # --- Lecture du fichier de métadonnées ---
     meta_info = parse_metadata_file(metadata_filepath, info['site'], info['numero'], info['timestamp'])
 
-    
-    info['lat'] = float(meta_info['lat'])
-    info['lon'] = float(meta_info['lon'])
-    info['pente'] = float(meta_info['pente'])
+    if 'lat' in meta_info :
+        info['lat'] = float(meta_info['lat'])
+
+    if 'lon' in meta_info :
+        info['lon'] = float(meta_info['lon'])
+
+    if 'pente' in meta_info :
+        info['pente'] = float(meta_info['pente'])
     
     return info
