@@ -1,7 +1,7 @@
 import os
 import re
 import ast
-from datetime import date time
+from datetime import datetime
 import pandas as pd
 
 
@@ -86,7 +86,7 @@ def parse_metadata_file(metadata_filepath, site, numero, timestamp):
 
     leg = leg_dict.get(timestamp.month)
     if leg is None:
-        print(f"[WARNING] Mois {timestamp.month} non reconnu dans leg_dict")
+        #print(f"[WARNING] Mois {timestamp.month} non reconnu dans leg_dict")
         return {}
 
     # --- Lecture du fichier ---
