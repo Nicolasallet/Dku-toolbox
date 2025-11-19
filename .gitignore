@@ -1,5 +1,5 @@
 # Ignorer le contenu des dossiers data et results
-data/
+#data/
 results/
 
 # Ignorer le dataset radar
