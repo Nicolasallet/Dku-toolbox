@@ -1,0 +1,22 @@
+# Ignorer le contenu des dossiers data et results
+data/
+results/
+
+# Ignorer le dataset radar
+radar_mesure/20degdataset
+
+# Ignorer tous les notebooks
+*.ipynb
+
+# Ignorer les caches Python
+__pycache__/
+radar_mesure/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pkl
+
+# Ignorer les dossiers de cache courants
+.cache/
+.ipynb_checkpoints/
+

@@ -68,6 +68,10 @@ def parse_metadata_file(metadata_filepath, site, numero, timestamp):
         Si fichier inexistant : message d'avertissement + {}
     """
 
+    if 'excav' in site : 
+        site = site[:-len(site.split(sep='_')[-1])-1]
+
+
     # --- Vérification de l'existence du fichier ---
     if not metadata_filepath or not os.path.exists(metadata_filepath):
         print(f"[WARNING] Fichier metadata introuvable : {metadata_filepath}")
@@ -81,7 +85,8 @@ def parse_metadata_file(metadata_filepath, site, numero, timestamp):
         11: 'fm_2024_dec/',
         12: 'fm_2024_dec/',
         1: 'fm_2025_jan/',
-        2: 'fm_2025_fev/'
+        2: 'fm_2025_fev/',
+        3: 'fm_2025_fev/'
     }
 
     leg = leg_dict.get(timestamp.month)
@@ -116,20 +121,15 @@ def parse_metadata_file(metadata_filepath, site, numero, timestamp):
 # =====================================================
 # === Extraction depuis le nom du fichier =============
 # =====================================================
+import os
+import re
 
 def parse_filename_info(filepath):
     """
     Extrait les infos principales depuis le nom du fichier radar.
-    Exemple :
+    Exemple attendu :
         '17GHz_fortress_drift_2_v_-30deg.txt'
-    Retour :
-        {
-          'frequence': 17,
-          'site': 'fortress_drift',
-          'numero': 2,
-          'polarisation': 'v',
-          'angle_local': -30
-        }
+    Si le format ne correspond pas, renvoie un dict rempli de None.
     """
     filename = os.path.basename(filepath)
     name = filename.rsplit('.', 1)[0]   # retire l’extension
@@ -137,33 +137,53 @@ def parse_filename_info(filepath):
 
     # format attendu : <freq>GHz_<site_parts>_<num>_<pol>_<angle>deg
     if len(parts) < 5:
-        raise ValueError(f"Nom de fichier inattendu : {filename}")
+        return {
+            "frequence": None,
+            "site": None,
+            "numero": None,
+            "polarisation": None,
+            "angle_local": None
+        }
 
     freq_part = parts[0]
     angle_part = parts[-1]
     pol_part = parts[-2]
     num_part = parts[-3]
-    site_parts = parts[1:-3]  # tout ce qui est entre freq et num
+    site_parts = parts[1:-3]
 
     try:
-        numero = int(num_part)
-    except ValueError:
-        numero = None
+        # fréquence (nombre avant 'GHz')
+        freq_match = re.match(r"(\d+(?:\.\d+)?)GHz", freq_part, re.IGNORECASE)
+        frequence = float(freq_match.group(1)) if freq_match else None
 
-    angle_match = re.match(r"([+-]?\d+)deg", angle_part)
-    angle_local = int(angle_match.group(1)) if angle_match else None
+        # numéro
+        numero = int(num_part) if num_part.isdigit() else None
 
-    site = "_".join(site_parts) if site_parts else None
-    polarisation = pol_part
+        # angle
+        angle_match = re.match(r"([+-]?\d+(?:\.\d+)?)deg", angle_part)
+        angle_local = float(angle_match.group(1)) if angle_match else None
+
+        # site et polarisation
+        site = "_".join(site_parts).strip() if site_parts else None
+        polarisation = pol_part.lower()
+
+    except Exception:
+        # En cas d'erreur quelconque, renvoie tout à None
+        return {
+            "frequence": None,
+            "site": None,
+            "numero": None,
+            "polarisation": None,
+            "angle_local": None
+        }
 
     return {
-        "frequence": freq_part,
+        "frequence": frequence,
         "site": site,
         "numero": numero,
         "polarisation": polarisation,
         "angle_local": angle_local
     }
-
 
 # =====================================================
 # === Fonction principale =============================
@@ -197,6 +217,13 @@ def extract_radar_info(radar_filepath, metadata_filepath=None):
         "lat": None,
         "lon": None
     }
+     
+    def is_number(value):
+        try:
+            float(value)
+            return True
+        except (ValueError, TypeError):
+            return False
 
     # --- Lecture du header ---
     header = parse_radar_header(radar_filepath)
@@ -228,7 +255,7 @@ def extract_radar_info(radar_filepath, metadata_filepath=None):
 
     # --- site ---
     if "site" in header:
-        info["site"] = header["site"].strip()
+        info["site"] = header["site"]
 
     # --- angle_local ---
     if "angle_local" in header:
@@ -240,13 +267,14 @@ def extract_radar_info(radar_filepath, metadata_filepath=None):
     # --- Lecture du fichier de métadonnées ---
     meta_info = parse_metadata_file(metadata_filepath, info['site'], info['numero'], info['timestamp'])
 
-    if 'lat' in meta_info :
+
+    if 'lat' in meta_info and is_number(meta_info['lat']):
         info['lat'] = float(meta_info['lat'])
 
-    if 'lon' in meta_info :
+    if 'lon' in meta_info and is_number(meta_info['lon']):
         info['lon'] = float(meta_info['lon'])
 
-    if 'pente' in meta_info :
+    if 'pente' in meta_info and is_number(meta_info['pente']):
         info['pente'] = float(meta_info['pente'])
     
     return info

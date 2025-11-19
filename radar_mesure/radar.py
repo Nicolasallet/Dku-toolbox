@@ -12,7 +12,7 @@ from dku_data_parser import extract_radar_info
 
 
 class RadarMesure:
-    def __init__(self, filepath, beta=8, pad_factor=5):
+    def __init__(self, filepath,beta=8, pad_factor=4, compute = True ,calib = False):
 
         self.filepath = filepath
         self.beta = beta
@@ -38,13 +38,20 @@ class RadarMesure:
 
         if self.frequence == 13 : 
             self.offset = 0.332
-            self.calib = 2.317e-4
+            self.calib = 3.238e-1
         if self.frequence == 17 : 
             self.offset = 0.226
-            self.calib = 1.723e-3
+            self.calib = 3.043e-3
 
-        # === Calcul du spectre à l'initialisation ===
-        self.df, _ = self.raw_to_mean_spectrum()
+        if calib != True :
+            if compute == True :
+                # === Calcul du spectre à l'initialisation ===
+                self.df, _ = self.raw_to_mean_spectrum()
+                self.sigma0,_ = self.get_sigma0(self.calib)
+        else : 
+            self.df,_ = self.raw_to_mean_spectrum()
+
+        
 
     def raw_to_mean_spectrum(self):
         scaling_factor_adc = (3.3 + 3.3) / (2 ** 12)
@@ -141,44 +148,29 @@ class RadarMesure:
             theta_deg = 24.5
             phi_deg = 19.5
 
+        angle_incident=np.radians(angle_incident)
         theta_rad = np.radians(theta_deg)
         phi_rad = np.radians(phi_deg)
-        return (np.pi * range_**2 * theta_rad * phi_rad) / (8 * np.log(2) * np.cos(angle_incident))           ## A changer selon gedelster ?
+        return (np.pi * range_**2 * theta_rad * phi_rad) / (8 * np.log(2) * np.cos(angle_incident))           ##selon geldstzer 
 
 
 
-    def get_sigma0(self):
-        angle_rad = np.radians(self.angle_local)
-        threshold = 5e-3
-        min_bins_stable = 20 * self.pad_factor
-
-        df = self.df.loc[0.5:10]
-        sigma_raw = (df['copol'] ** 2) * (df.index ** 4) / 0.001
-        air = self.get_air(angle_rad, df.index.values)
+    def get_sigma0(self,c):
+        angle_incident_local = (self.angle_local)-(self.pente)
+        df = self.df[0.5:]
+        sigma_raw = (df['copol'] ** 2) * (df.index ** 4) / c
+        air = self.get_air(angle_incident_local, df.index.values)
         delta_r = np.diff(df.index.values).mean()
         sigma = (sigma_raw / air) * delta_r
 
         sigma_cumsum_log = np.log10(np.cumsum(sigma.values))
-        dsigma = np.gradient(sigma_cumsum_log)
 
         sigma_df = pd.DataFrame({
             'range': df.index.values,
-            'sigma_log': sigma_cumsum_log,
-            'dsigma': dsigma
-        })
+            'sigma_log': 10*sigma_cumsum_log,
+          })
 
-        stable_mask = np.abs(sigma_df['dsigma'].values) < threshold
-        stable_indices = [i for i, val in enumerate(stable_mask) if val]
+        sigma0 = 10*sigma_cumsum_log[175*self.pad_factor]
 
-        for k, g in groupby(enumerate(stable_indices), lambda x: x[0] - x[1]):
-            group = list(map(itemgetter(1), g))
-            if len(group) >= min_bins_stable:
-                first_stable_idx = group[0]
-                stable_value_db = 10 * sigma_df.loc[first_stable_idx, 'sigma_log']
-                stable_range = sigma_df.loc[first_stable_idx, 'range']
-                break
-        else:
-            stable_value_db = np.nan
-            stable_range = np.nan
-
-        return stable_value_db, stable_range
+        return sigma0,sigma_df
+ 
