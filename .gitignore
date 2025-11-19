@@ -6,11 +6,12 @@ results/
 radar_mesure/20degdataset
 
 # Ignorer tous les notebooks
-*.ipynb
+#*.ipynb
 
 # Ignorer les caches Python
 __pycache__/
 radar_mesure/__pycache__/
+radar_mesure/*pyc
 *.pyc
 *.pyo
 *.pyd
