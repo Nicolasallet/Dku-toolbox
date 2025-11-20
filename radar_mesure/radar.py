@@ -12,7 +12,7 @@ from dku_data_parser import extract_radar_info
 
 
 class RadarMesure:
-    def __init__(self, filepath,beta=8, pad_factor=4, compute = True ,calib = False):
+    def __init__(self, filepath, beta=8, pad_factor=4, compute = True ,calib = False):
 
         self.filepath = filepath
         self.beta = beta
