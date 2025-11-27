@@ -215,7 +215,8 @@ def extract_radar_info(radar_filepath, metadata_filepath=None):
         "timestamp": None,
         "pente": None,
         "lat": None,
-        "lon": None
+        "lon": None,
+        "smp" : None
     }
      
     def is_number(value):
@@ -276,5 +277,8 @@ def extract_radar_info(radar_filepath, metadata_filepath=None):
 
     if 'pente' in meta_info and is_number(meta_info['pente']):
         info['pente'] = float(meta_info['pente'])
+
+    if 'name' in meta_info :
+        info['smp'] = meta_info['name']
     
     return info

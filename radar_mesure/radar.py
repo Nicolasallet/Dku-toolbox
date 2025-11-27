@@ -32,6 +32,7 @@ class RadarMesure:
         self.time = info['timestamp']
         self.coords = (info['lat'],info['lon'])
         self.pente = info['pente']
+        self.smp = info['smp']
         
         
         self.temp = self.extract_sensor_temperature()
